@@ -1,11 +1,23 @@
 import os
 import javalang
 import json
-import requests
+from datetime import datetime
 
+def find_interfaces(directory):
+    interfaces = []
+    for root, dirs, files in os.walk(directory):
+        for file in files:
+            if file.endswith(".java") and not file.endswith("Controller.java"):
+                filepath = os.path.join(root, file)
+                with open(filepath, 'r') as f:
+                    content = f.read()
+                    tree = javalang.parse.parse(content)
+                    for path, node in tree.filter(javalang.tree.InterfaceDeclaration):
+                        interfaces.append(filepath)
+    return interfaces
 
-def find_controllers(directory):
-    controllers = []
+def find_class_fields(directory, class_name):
+    class_fields = {}
     for root, dirs, files in os.walk(directory):
         for file in files:
             if file.endswith(".java"):
@@ -13,11 +25,12 @@ def find_controllers(directory):
                 with open(filepath, 'r') as f:
                     content = f.read()
                     tree = javalang.parse.parse(content)
-                    for path, node in tree.filter(javalang.tree.Annotation):
-                        if node.name == 'RestController' or node.name == 'Controller':
-                            controllers.append(filepath)
-    return controllers
-
+                    for path, node in tree.filter(javalang.tree.ClassDeclaration):
+                        if node.name == class_name:
+                            for field in node.fields:
+                                for declarator in field.declarators:
+                                    class_fields[declarator.name] = field.type.name
+    return class_fields
 
 def extract_endpoints(filepath):
     with open(filepath, 'r') as f:
@@ -31,15 +44,33 @@ def extract_endpoints(filepath):
                 'description': '',
                 'parameters': []
             }
+            print(f'Checking method: {node.name}')
             for annotation in node.annotations:
+                print(f'Annotation found: {annotation.name}')
                 if annotation.name in ['GetMapping', 'PostMapping', 'PutMapping', 'DeleteMapping', 'RequestMapping']:
-                    endpoint['method'] = annotation.name.replace('Mapping', '').upper()
                     if annotation.element is not None:
-                        for element in annotation.element.pair:
-                            if element.name == 'value':
-                                endpoint['url'] = element.value.value
-                            elif element.name == 'description':
-                                endpoint['description'] = element.value.value
+                        elements = annotation.element if isinstance(annotation.element, list) else annotation.element.pair
+                        for element in elements:
+                            if isinstance(element.value, javalang.tree.Literal):
+                                print(f'Element found: {element.name} = {element.value.value}')
+                                if element.name == 'method':
+                                    endpoint['method'] = element.value.value.upper()
+                                if element.name == 'value':
+                                    endpoint['url'] = element.value.value.strip('"')
+                                elif element.name == 'description':
+                                    endpoint['description'] = element.value.value.strip('"')
+                            elif isinstance(element.value, javalang.tree.ElementArrayValue):
+                                for val in element.value.values:
+                                    if isinstance(val, javalang.tree.Literal):
+                                        print(f'Element array value found: {val.value}')
+                                        if element.name == 'value':
+                                            endpoint['url'] = val.value.strip('"')
+                                        elif element.name == 'description':
+                                            endpoint['description'] = val.value.strip('"')
+                            elif isinstance(element.value, javalang.tree.MemberReference):
+                                print(f'MemberReference found: {element.value.member}')
+                                if element.name == 'method':
+                                    endpoint['method'] = element.value.member.upper()
             for param in node.parameters:
                 param_info = {
                     'name': param.name,
@@ -51,10 +82,10 @@ def extract_endpoints(filepath):
                 endpoint['parameters'].append(param_info)
             if endpoint['method'] and endpoint['url']:
                 endpoints.append(endpoint)
+        print(f'Endpoints found in {filepath}: {endpoints}')
     return endpoints
 
-
-def generate_postman_collection(endpoints, output_file):
+def generate_postman_collection(endpoints, output_file, java_directory):
     collection = {
         "info": {
             "name": "Agroforte API Collections",
@@ -65,15 +96,18 @@ def generate_postman_collection(endpoints, output_file):
     }
 
     for endpoint in endpoints:
+        name = endpoint['description'] if endpoint['description'] else endpoint['url']
         item = {
-            "name": endpoint['description'],
+            "name": name,
             "request": {
                 "method": endpoint['method'],
                 "header": [],
                 "url": {
                     "raw": f"{{{{base_url}}}}{endpoint['url']}",
                     "host": ["{{base_url}}"],
-                    "path": endpoint['url'].strip('/').split('/')
+                    "path": endpoint['url'].strip('/').split('/'),
+                    "query": [],
+                    "variable": []
                 },
                 "body": {
                     "mode": "raw",
@@ -85,57 +119,48 @@ def generate_postman_collection(endpoints, output_file):
 
         for param in endpoint['parameters']:
             if 'PathVariable' in param['annotations']:
-                item['request']['url']['variable'] = [{
+                item['request']['url']['variable'].append({
                     "key": param['name'],
                     "value": "",
                     "description": param['type']
-                }]
+                })
             elif 'RequestParam' in param['annotations']:
-                item['request']['url']['query'] = [{
+                item['request']['url']['query'].append({
                     "key": param['name'],
                     "value": "",
                     "description": param['type']
-                }]
+                })
             elif 'RequestHeader' in param['annotations']:
                 item['request']['header'].append({
                     "key": param['name'],
                     "value": "",
                     "description": param['type']
                 })
+            elif 'RequestBody' in param['annotations']:
+                class_fields = find_class_fields(java_directory, param['type'])
+                body_content = {field: "" for field in class_fields.keys()}
+                item['request']['body']['raw'] = json.dumps(body_content, indent=2)
 
         collection['item'].append(item)
 
     with open(output_file, 'w') as f:
         json.dump(collection, f, indent=2)
 
+# Diretório dos arquivos Java
+java_directory = 'C:\\Users\\rodri\\personalProjects\\scripts_python\\api-limit\\src\\main\\java\\br\\com\\meuagroforte'
 
-# def update_postman_collection(api_key, collection_uid, postman_collection):
-#     url = f"https://api.getpostman.com/collections/{collection_uid}"
-#     headers = {
-#         'X-Api-Key': api_key,
-#         'Content-Type': 'application/json'
-#     }
-#     data = json.dumps({"collection": postman_collection})
-#     response = requests.put(url, headers=headers, data=data)
-#     return response.json()
+# Encontrar todas as interfaces
+interfaces = find_interfaces(java_directory)
+print(f'Interfaces found: {interfaces}')
 
-java_directory = 'C:\\Users\\rodri\\personalProjects\\scripts_python\\api-limit\\src\\main\\java\\br\\com\\meuagroforte\\limit\\controller'
-# api_key = 'sua_api_key_do_postman'
-# collection_uid = 'uid_da_sua_collection'
-
-controllers = find_controllers(java_directory)
-
+# Extrair endpoints de todas as interfaces
 all_endpoints = []
-for controller in controllers:
-    endpoints = extract_endpoints(controller)
+for interface in interfaces:
+    endpoints = extract_endpoints(interface)
     all_endpoints.extend(endpoints)
 
-output_file = 'postman_collection.json'
-generate_postman_collection(all_endpoints, output_file)
+# Gerar a collection do Postman com timestamp
+timestamp = datetime.now().strftime("%Y-%m-%d-H%HM%M")
+output_file = f'postman_collection_{timestamp}.json'
+generate_postman_collection(all_endpoints, output_file, java_directory)
 print(f'Postman collection generated: {output_file}')
-
-# Atualizar Collection no Postman
-# with open(output_file, 'r') as f:
-#     postman_collection = json.load(f)
-# response = update_postman_collection(api_key, collection_uid, postman_collection)
-# print(response)
