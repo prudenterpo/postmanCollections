@@ -3,6 +3,7 @@ import javalang
 import json
 import datetime
 
+
 def find_interfaces(directory):
     interfaces = []
     for root, dirs, files in os.walk(directory):
@@ -15,6 +16,7 @@ def find_interfaces(directory):
                     for path, node in tree.filter(javalang.tree.InterfaceDeclaration):
                         interfaces.append(filepath)
     return interfaces
+
 
 def find_class_fields(directory, class_name):
     class_fields = {}
@@ -31,6 +33,7 @@ def find_class_fields(directory, class_name):
                                 for declarator in field.declarators:
                                     class_fields[declarator.name] = field.type.name
     return class_fields
+
 
 def extract_endpoints(filepath):
     with open(filepath, 'r', encoding='utf-8') as f:
@@ -49,7 +52,7 @@ def extract_endpoints(filepath):
                 if annotation.name in ['GetMapping', 'PostMapping', 'PutMapping', 'DeleteMapping', 'RequestMapping']:
                     method = annotation.name.replace('Mapping', '').upper()
                     if method == 'REQUEST':
-                        method = 'GET'  # Definir GET como padrão
+                        method = 'GET'
                     if annotation.element is not None:
                         elements = annotation.element if isinstance(annotation.element, list) else annotation.element.pair
                         for element in elements:
@@ -78,6 +81,7 @@ def extract_endpoints(filepath):
             if endpoint['method'] and endpoint['url']:
                 endpoints.append(endpoint)
     return endpoints
+
 
 def generate_postman_collection(endpoints, output_file):
     collection = {
@@ -146,10 +150,9 @@ def generate_postman_collection(endpoints, output_file):
     with open(output_file, 'w', encoding='utf-8') as f:
         json.dump(collection, f, indent=2)
 
-# Diretório dos arquivos Java
+
 java_directory = 'C:\\Users\\rodri\\personalProjects\\scripts_python\\apis'
 
-# Encontrar todas as subpastas (APIs)
 subfolders = [f.path for f in os.scandir(java_directory) if f.is_dir()]
 
 all_endpoints = {}
