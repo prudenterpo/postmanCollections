@@ -2,6 +2,9 @@ import os
 import javalang
 import json
 import datetime
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 def find_interfaces(directory):
@@ -54,7 +57,8 @@ def extract_endpoints(filepath):
                     if method == 'REQUEST':
                         method = 'GET'
                     if annotation.element is not None:
-                        elements = annotation.element if isinstance(annotation.element, list) else annotation.element.pair
+                        elements = annotation.element if isinstance(annotation.element,
+                                                                    list) else annotation.element.pair
                         for element in elements:
                             if isinstance(element.value, javalang.tree.Literal):
                                 if element.name == 'value':
@@ -151,7 +155,9 @@ def generate_postman_collection(endpoints, output_file):
         json.dump(collection, f, indent=2)
 
 
-java_directory = 'C:\\Users\\rodri\\personalProjects\\scripts_python\\apis'
+java_directory = os.getenv('JAVA_DIRECTORY')
+
+postman_collections_base_path = os.getenv('POSTMAN_COLLECTIONS_OUTPUT_PATH')
 
 subfolders = [f.path for f in os.scandir(java_directory) if f.is_dir()]
 
@@ -162,7 +168,6 @@ for subfolder in subfolders:
     interfaces = find_interfaces(subfolder)
     print(f'Interfaces found in {api_name}: {interfaces}')
 
-    # Extrair endpoints de todas as interfaces
     api_endpoints = []
     for interface in interfaces:
         endpoints = extract_endpoints(interface)
@@ -170,8 +175,10 @@ for subfolder in subfolders:
 
     all_endpoints[api_name] = api_endpoints
 
-# Gerar a collection do Postman com timestamp
 timestamp = datetime.datetime.now().strftime("%Y-%m-%d-H%HM%M")
-output_file = f'C:\\Users\\rodri\\personalProjects\\scripts_python\\postmanCollections\\output\\postmanTestao_collection_{timestamp}.json'
+
+output_file = f'{postman_collections_base_path}\\postman_collection_{timestamp}.json'
+
 generate_postman_collection(all_endpoints, output_file)
-print(f'Postman collection generated: {output_file}')
+
+print(f'Postman collection generated: {postman_collections_base_path}')
