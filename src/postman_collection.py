@@ -3,6 +3,7 @@ import javalang
 import json
 import datetime
 from dotenv import load_dotenv
+import update_postman_collection
 
 load_dotenv()
 
@@ -182,3 +183,6 @@ output_file = f'{postman_collections_base_path}\\postman_collection_{timestamp}.
 generate_postman_collection(all_endpoints, output_file)
 
 print(f'Postman collection generated: {postman_collections_base_path}')
+
+
+update_postman_collection.update_postman_collection(output_file)
