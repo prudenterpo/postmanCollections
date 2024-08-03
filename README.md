@@ -35,3 +35,25 @@ With the virtual environment activated, install the project dependencies by exec
 ```bash
 pip install -r requirements.txt
 ```
+
+## Running the Update Script
+
+The `update_script.sh` script automates the process of updating multiple Git repositories and executing the Python script to generate Postman collections.
+
+### Prerequisites
+Make sure you have Git Bash installed on Windows, or use the default terminal on macOS/Linux.
+
+### Script Permissions
+
+Before running the script, ensure it has the appropriate execution permissions. You can set the permissions by running the following command in the terminal:
+
+```bash
+chmod +x scripts/update_script.sh
+```
+
+### Running the Script
+To run the script, navigate to the postman_collections directory and execute the following command:
+```bash
+./scripts/update_script.sh
+```
+
