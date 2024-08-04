@@ -178,7 +178,7 @@ for subfolder in subfolders:
 
 timestamp = datetime.datetime.now().strftime("%Y-%m-%d-H%HM%M")
 
-output_file = f'{postman_collections_base_path}\\postman_collection_{timestamp}.json'
+output_file = os.path.join(postman_collections_base_path, f'postman_collection_{timestamp}.json')
 
 generate_postman_collection(all_endpoints, output_file)
 
