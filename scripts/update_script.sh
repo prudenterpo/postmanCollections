@@ -26,11 +26,6 @@ done
 
 python_script="/Users/rodrigooliveira/af_projects/scripts/postmanCollections/src/main.py"
 
-#if [ ! -f "$python_script" ]; then
-#    echo "Error: Python script $python_script does not exist."
-#    exit 1
-#fi
-
 echo "Executing Python script: $python_script"
 python3 "$python_script" || { echo "Error: Failed to execute Python script $python_script"; exit 1; }
 
