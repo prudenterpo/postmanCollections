@@ -136,8 +136,8 @@ def generate_postman_collection(endpoints, output_file):
     logging.info(f'GENERATING POSTMAN COLLECTION IN FILE: {output_file}')
     collection = {
         "info": {
-            "name": "MAIN - test 4 main.py",
-            "description": "Generated from Java Controllers",
+            "name": "Agroforte Spring Projects",
+            "description": "Generated from Java Inteface Controllers",
             "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
         },
         "item": []
@@ -155,7 +155,7 @@ def generate_postman_collection(endpoints, output_file):
         elif field_type in ['LocalDate', 'Date']:
             return "1970-01-01"
         else:
-            return {}
+            return ""
 
     def generate_body_content(class_fields):
         body_content = {}
