@@ -13,23 +13,32 @@ load_dotenv()
 start_time = datetime.datetime.now()
 logging.info(f'Script started at {start_time.strftime("%Y-%m-%d %H:%M:%S")}')
 
+import os
+import javalang
+import logging
+
 
 def find_interfaces(directory):
-    logging.info(f'Searching for interfaces in directory: {directory}')
     interfaces = []
-    for root, dirs, files in os.walk(directory):
-        for file in files:
-            if "controller" in root.lower() and file.endswith(".java") and not file.endswith("Controller.java"):
-                filepath = os.path.join(root, file)
-                with open(filepath, 'r', encoding='utf-8') as f:
-                    content = f.read()
-                    try:
-                        tree = javalang.parse.parse(content)
-                        for path, node in tree.filter(javalang.tree.InterfaceDeclaration):
-                            interfaces.append(filepath)
-                            logging.info(f'Interface found: {filepath}')
-                    except javalang.parser.JavaSyntaxError:
-                        logging.warning(f'Error parsing file: {filepath}')
+    base_path = os.path.join(directory, 'src/main/java/br/com/meuagroforte/')
+    if os.path.exists(base_path):
+        for root, dirs, files in os.walk(base_path):
+            if root.endswith('/controller'):
+                for file in files:
+                    if file.endswith(".java") and not file.endswith("Controller.java"):
+                        filepath = os.path.join(root, file)
+                        with open(filepath, 'r', encoding='utf-8') as f:
+                            content = f.read()
+                            try:
+                                tree_teste = javalang.parse.parse(content)
+                                for path, node in tree_teste.filter(javalang.tree.InterfaceDeclaration):
+                                    interfaces.append(filepath)
+                                    logging.info(f'Interface found: {filepath}')
+                            except javalang.parser.JavaSyntaxError as e:
+                                logging.warning(f'Error parsing file: {filepath} with error: {e}')
+    else:
+        logging.warning(f"The base directory does not exist: {base_path}")
+
     return interfaces
 
 
@@ -47,7 +56,8 @@ def find_class_fields(directory, class_name, processed_classes=None):
     processed_classes.add(class_name)
 
     class_fields = {}
-    for root, dirs, files in os.walk(directory):
+    base_path = os.path.join(directory, 'src/main/java/br/com/meuagroforte/')
+    for root, dirs, files in os.walk(base_path):
         for file in files:
             if file.endswith(".java"):
                 filepath = os.path.join(root, file)

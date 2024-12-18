@@ -1,6 +1,6 @@
 #!/bin/bash
 
-apis_directory="../apis"
+apis_directory="../../apis"
 
 if [ ! -d "$apis_directory" ]; then
     echo "Error: Directory $apis_directory does not exist."
@@ -12,8 +12,8 @@ for dir in "$apis_directory"/*; do
         echo "Navigating to $dir"
         cd "$dir" || { echo "Error: Failed to navigate to $dir"; exit 1; }
 
-        echo "Running git checkout master in $(basename "$dir")"
-        git checkout master || { echo "Error: Failed to run git checkout master in $dir"; exit 1; }
+        echo "Running git checkout develop in $(basename "$dir")"
+        git checkout develop || { echo "Error: Failed to run git checkout master in $dir"; exit 1; }
 
         echo "Running git pull in $(basename "$dir")"
         git pull || { echo "Error: Failed to run git pull in $dir"; exit 1; }
